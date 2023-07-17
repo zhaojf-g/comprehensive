@@ -21,16 +21,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
 @Slf4j
-@EnableAsync
 public class TaskRequest {
 
     private final DateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
 
     public static Long time = 0L;
 
-//    private final AtomicBoolean search = new AtomicBoolean(true);
-
-    @Async
     public void select(List<User> users, AtomicBoolean search) {
         if (search.get()) {
             final long timeMillis = System.currentTimeMillis();
@@ -57,7 +53,7 @@ public class TaskRequest {
 
                     for (InsuranceInfo insuranceInfo : result.getData()) {
 
-                        if (insuranceInfo.getTotalBookableNum() >= 0) {
+                        if (insuranceInfo.getTotalBookableNum() > 0) {
                             List<BookingRule> bookingRules = insuranceInfo.getBookingRules();
                             synchronized (search) {
                                 if (search.get()) {

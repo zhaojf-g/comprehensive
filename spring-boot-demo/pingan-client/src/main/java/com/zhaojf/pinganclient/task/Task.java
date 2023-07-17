@@ -26,7 +26,7 @@ public class Task {
     }
 
 
-    //    @Scheduled(cron = "0 59 16 * * ?")
+//        @Scheduled(cron = "0 54 21 * * ?")
     @Scheduled(fixedDelay = 1000000000)
 //    @PostConstruct
     public void task() throws InterruptedException {
@@ -44,7 +44,7 @@ public class Task {
             }
             Thread.sleep(1000);
             while (this.search.get()) {
-                taskRequest.select(users, this.search);
+                new Thread(() -> taskRequest.select(users, search)).start();
                 Thread.sleep(2);
             }
         } else {
