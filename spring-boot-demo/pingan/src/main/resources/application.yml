@@ -4,3 +4,8 @@ spring:
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: GMT+8
+  datasource:
+    url: jdbc:mysql://82.157.162.192:3306/pingan?autoReconnect=true&useUnicode=true&characterEncoding=utf8&useOldAliasMetadataBehavior=true&useCursorFetch=true&defaultFetchSize=10000&useSSL=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: Txy_.158158
+    driverClassName: com.mysql.jdbc.Driver

@@ -15,11 +15,29 @@ public class User {
 
     private String vehicleNo; // 车牌号
 
-    public User(String sessionId, String signature, String contactName, String contactTelephone, String vehicleNo) {
+    private boolean reservation = true;
+
+    private String number;
+
+    public User(String sessionId, String signature, String contactName, String contactTelephone, String vehicleNo, String number) {
         this.sessionId = sessionId;
         this.signature = signature;
         this.contactName = contactName;
         this.contactTelephone = contactTelephone;
         this.vehicleNo = vehicleNo;
+        this.number = number;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "sessionId='" + sessionId + '\'' +
+                ", signature='" + signature + '\'' +
+                ", contactName='" + contactName + '\'' +
+                ", contactTelephone='" + contactTelephone + '\'' +
+                ", vehicleNo='" + vehicleNo + '\'' +
+                ", reservation=" + reservation +
+                ", number='" + number + '\'' +
+                '}';
     }
 }
