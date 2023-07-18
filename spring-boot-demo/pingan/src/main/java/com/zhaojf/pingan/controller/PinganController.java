@@ -1,10 +1,9 @@
 package com.zhaojf.pingan.controller;
 
-import com.alibaba.fastjson.JSONObject;
+import com.zhaojf.pingan.entity.AppointmentRecord;
 import com.zhaojf.pingan.entity.User;
+import com.zhaojf.pingan.service.AppointmentRecordService;
 import com.zhaojf.pingan.service.UserService;
-import com.zhaojf.pingan.task.Task;
-import com.zhaojf.pingan.vo.TokenInfo;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,8 +14,11 @@ public class PinganController {
 
     private final UserService userService;
 
-    public PinganController(UserService userService) {
+    private final AppointmentRecordService appointmentRecordService;
+
+    public PinganController(UserService userService, AppointmentRecordService appointmentRecordService) {
         this.userService = userService;
+        this.appointmentRecordService = appointmentRecordService;
     }
 
 //    @PostMapping("/token")
@@ -31,9 +33,16 @@ public class PinganController {
 //    }
 
     @GetMapping("/token")
-    public List<User> getToken(){
+    public List<User> getToken() {
 
         return userService.list();
+    }
+
+    @PostMapping("/record")
+    public void addRecord(@RequestBody AppointmentRecord record) {
+
+        appointmentRecordService.save(record);
+
     }
 
 }

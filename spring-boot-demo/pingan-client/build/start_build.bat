@@ -1,0 +1,1 @@
+jpackage --type app-image --input ../target --name pingan_clinet --win-console --main-jar pingan-client-1.0.jar
