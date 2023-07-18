@@ -25,10 +25,11 @@ public class Task {
         this.taskRequest = taskRequest;
     }
 
+    //        @Scheduled(cron = "0 54 21 * * ?")
 
-//        @Scheduled(cron = "0 54 21 * * ?")
+    //    @PostConstruct
+//    @Scheduled(cron = "0 55 16 * * ?")
     @Scheduled(fixedDelay = 1000000000)
-//    @PostConstruct
     public void task() throws InterruptedException {
 
         String url = "http://82.157.162.192:80/pingan/token?time=" + System.currentTimeMillis();
@@ -55,5 +56,16 @@ public class Task {
 
     }
 
+
+//    @Scheduled(cron = "0 5 17 * * ?")
+//    public void stopTask() {
+//        log.info("本次预约成功用户：");
+//        for (User user : this.users) {
+//            if (!user.isReservation()) {
+//                log.info(user.toString());
+//            }
+//            user.setReservation(false);
+//        }
+//    }
 
 }

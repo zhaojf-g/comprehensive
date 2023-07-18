@@ -31,11 +31,11 @@ public class User {
     @Override
     public String toString() {
         return "User{" +
-                "sessionId='" + sessionId + '\'' +
-                ", signature='" + signature + '\'' +
                 ", contactName='" + contactName + '\'' +
                 ", contactTelephone='" + contactTelephone + '\'' +
                 ", vehicleNo='" + vehicleNo + '\'' +
+                "sessionId='" + sessionId + '\'' +
+                ", signature='" + signature + '\'' +
                 ", reservation=" + reservation +
                 ", number='" + number + '\'' +
                 '}';

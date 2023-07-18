@@ -39,8 +39,6 @@ public class TaskRequest {
                 Result result = JSONObject.parseObject(body, Result.class);
 
                 final long currentTimeMillis = System.currentTimeMillis();
-
-
                 long t = currentTimeMillis - timeMillis;
                 if (result != null && result.getData().size() > 0) {
 
@@ -127,8 +125,6 @@ public class TaskRequest {
         long diff = timeMillis - time;
         time = timeMillis;
 
-//        HttpEntity<JSONObject> request = new HttpEntity<>(json, headers);
-
 
         Result result = null;
         try {
@@ -157,11 +153,30 @@ public class TaskRequest {
             if (result.getCode() == 0) {
                 user.setReservation(false);
                 log.info(Thread.currentThread().getName() + "【" + user.getContactName() + "】预约成功！！！！！！");
+                new Thread(() -> addRecord(user, date + " " + start_time + "-" + end_time)).start();
+
             } else if (user.isReservation()) {
                 this.booking(date, start_time, end_time, id_booking_survey, user);
             }
         }
 
+    }
+
+    private void addRecord(User user, String date) {
+        String url = "http://82.157.162.192:80/pingan/record";
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "application/json");
+
+        JSONObject json = new JSONObject();
+        json.put("name", user.getContactName());
+        json.put("telephone", user.getContactTelephone());
+        json.put("vehicleNo", user.getVehicleNo());
+        json.put("date", date);
+
+        HttpRequest httpRequest = HttpRequest.post(url).acceptJson();
+        httpRequest.headers(headers);
+        httpRequest.send(json.toJSONString());
+        httpRequest.body();
     }
 
 }
