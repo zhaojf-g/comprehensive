@@ -22,7 +22,8 @@
         <module>websocket</module>
 		<module>pingan</module>
 		<module>pingan-client</module>
-	</modules>
+        <module>pingan-test</module>
+    </modules>
 
 	<dependencies>
 

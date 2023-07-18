@@ -66,6 +66,7 @@ public class TaskRequest {
                                             for (String j : s) {
                                                 final BookingRule bookingRule = bookingRules.get(Integer.parseInt(j));
                                                 new Thread(() -> booking(insuranceInfo.getBookingDate(), bookingRule.getStartTime(), bookingRule.getEndTime(), bookingRule.getIdBookingSurvey(), user)).start();
+
                                             }
 
                                         }).start();
