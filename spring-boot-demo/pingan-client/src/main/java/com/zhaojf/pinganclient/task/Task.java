@@ -5,9 +5,12 @@ import com.github.kevinsawicki.http.HttpRequest;
 import com.zhaojf.pinganclient.vo.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
@@ -19,10 +22,13 @@ public class Task {
 
     private final AtomicBoolean search = new AtomicBoolean(true);
 
+    private final ThreadPoolExecutor threadPoolExecutor;
+
     private List<User> users = new ArrayList<>();
 
-    public Task(TaskRequest taskRequest) {
+    public Task(TaskRequest taskRequest, ThreadPoolExecutor threadPoolExecutor) {
         this.taskRequest = taskRequest;
+        this.threadPoolExecutor = threadPoolExecutor;
     }
 
 
@@ -37,15 +43,19 @@ public class Task {
         final int code = httpRequest.code();
         if (code == 200) {
             final String body = httpRequest.body();
-            this.users = JSONArray.parseArray(body, User.class);
+            List<User> users = JSONArray.parseArray(body, User.class);
+
+            this.users.add(users.get(0));
             log.info("获取用户【" + this.users.size() + "】：");
             for (User user : this.users) {
                 log.info("用户：" + user.toString());
             }
             Thread.sleep(1000);
             while (this.search.get()) {
-                new Thread(() -> taskRequest.select(users, search)).start();
-                Thread.sleep(2);
+                Thread thread = new Thread(() -> taskRequest.select(this.users, search));
+                thread.setPriority(1);
+                threadPoolExecutor.execute(thread);
+                Thread.sleep(10);
             }
         } else {
             log.error("获取身份失败!");

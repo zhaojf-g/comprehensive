@@ -2,21 +2,18 @@ package com.zhaojf.pinganclient.task;
 
 import com.alibaba.fastjson.JSONObject;
 import com.github.kevinsawicki.http.HttpRequest;
-import com.zhaojf.pinganclient.vo.BookingRule;
 import com.zhaojf.pinganclient.vo.InsuranceInfo;
 import com.zhaojf.pinganclient.vo.Result;
 import com.zhaojf.pinganclient.vo.User;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
-import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
@@ -25,7 +22,13 @@ public class TaskRequest {
 
     private final DateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
 
+    private final ThreadPoolExecutor threadPoolExecutor;
+
     public static Long time = 0L;
+
+    public TaskRequest(ThreadPoolExecutor threadPoolExecutor) {
+        this.threadPoolExecutor = threadPoolExecutor;
+    }
 
     public void select(List<User> users, AtomicBoolean search) {
         if (search.get()) {
@@ -43,37 +46,27 @@ public class TaskRequest {
 
                 long t = currentTimeMillis - timeMillis;
                 if (result != null && result.getData().size() > 0) {
-
-
-                    StringBuilder str = new StringBuilder("间隔:" + diff + "\t请求时长：" + t + "\t");
+                    StringBuilder str = new StringBuilder("间隔:" + diff + "\t请求时间："+format.format(new Date(timeMillis))+"\t当前时间："+ format.format(new Date(currentTimeMillis)) +"\t请求时长：" + t + "\t");
                     for (InsuranceInfo insuranceInfo : result.getData()) {
                         str.append(insuranceInfo.getBookingDate()).append("\t可预约总数：").append(insuranceInfo.getTotalBookableNum()).append("\t");
                     }
                     log.info(str.toString());
 
                     for (InsuranceInfo insuranceInfo : result.getData()) {
-
-                        if (insuranceInfo.getTotalBookableNum() > 0) {
-                            List<BookingRule> bookingRules = insuranceInfo.getBookingRules();
-                            synchronized (search) {
+                        if (insuranceInfo.getTotalBookableNum() >= 0) {
+                            Thread.currentThread().setPriority(10);
+//                            synchronized (search) {
                                 if (search.get()) {
                                     search.set(false);
                                     for (User user : users) {
-                                        new Thread(() -> {
-                                            String number = user.getNumber();
-                                            if (number == null || "".equals(number)) {
-                                                number = "0,1,2,3,4";
-                                            }
-                                            final String[] s = number.split(",");
-                                            for (String j : s) {
-                                                final BookingRule bookingRule = bookingRules.get(Integer.parseInt(j));
-                                                new Thread(() -> booking(insuranceInfo.getBookingDate(), bookingRule.getStartTime(), bookingRule.getEndTime(), bookingRule.getIdBookingSurvey(), user)).start();
-                                            }
-
-                                        }).start();
+                                        log.info("开始1请求时间："+format.format(new Date(System.currentTimeMillis())));
+                                        UserTask userTask = new UserTask(user, insuranceInfo, threadPoolExecutor);
+                                        Thread thread = new Thread(userTask);
+                                        thread.setPriority(10);
+                                        threadPoolExecutor.execute(thread);
                                     }
                                 }
-                            }
+//                            }
 
                         }
 

@@ -7,70 +7,82 @@ import com.zhaojf.pinganclient.vo.InsuranceInfo;
 import com.zhaojf.pinganclient.vo.Result;
 import com.zhaojf.pinganclient.vo.User;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
-public class UserTask {
+public class UserTask implements Runnable{
 
     private final User user;
 
     private final InsuranceInfo insuranceInfo;
 
-    private final AtomicBoolean running = new AtomicBoolean(true);
-
     public static Long time = 0L;
 
-    public UserTask(User user, InsuranceInfo insuranceInfo) {
+    private final DateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
+
+    private final ThreadPoolExecutor threadPoolExecutor;
+
+    public UserTask(User user, InsuranceInfo insuranceInfo, ThreadPoolExecutor threadPoolExecutor) {
         this.user = user;
         this.insuranceInfo = insuranceInfo;
+        this.threadPoolExecutor = threadPoolExecutor;
     }
 
-    public void start() {
+    @Override
+    public void run() {
 
-        int i = 0;
+        log.info("开始2请求时间："+format.format(new Date(System.currentTimeMillis())));
         String number = user.getNumber();
         if (number == null || "".equals(number)) {
-            number = "0,1,2,3,4";
+            number = "2";
         }
         final String[] s = number.split(",");
 
         List<BookingRule> bookingRules = insuranceInfo.getBookingRules();
         String bookingDate = insuranceInfo.getBookingDate();
+        AtomicInteger i = new AtomicInteger();
+        while (this.user.isReservation()) {
+            if (i.get() == 0) {
 
-        while (running.get() && i <= 100) {
+                log.info("开始3请求时间："+format.format(new Date(System.currentTimeMillis())));
+                // 优先遍历指定的节点
+                for (String j : s) {
+                    final BookingRule bookingRule = bookingRules.get(Integer.parseInt(j));
+                    log.info("开始4请求时间："+format.format(new Date(System.currentTimeMillis())));
+                    threadPoolExecutor.execute(() -> this.booking(bookingDate, bookingRule.getStartTime(), bookingRule.getEndTime(), bookingRule.getIdBookingSurvey(), user, i.incrementAndGet()));
+                }
 
-            if (i == 0) {
-                int j = Integer.parseInt(s[i % 5]);
-                final BookingRule bookingRule = bookingRules.get(j);
-                new Thread(() -> this.booking(bookingDate, bookingRule.getStartTime(), bookingRule.getEndTime(), bookingRule.getIdBookingSurvey(), user)).start();
+                // 休眠5毫米开始随机预约
                 try {
-                    Thread.sleep(5);
+                    Thread.sleep(50);
                 } catch (InterruptedException ignored) {
                 }
+
             }
 
             for (BookingRule bookingRule : bookingRules) {
-                new Thread(() -> this.booking(bookingDate, bookingRule.getStartTime(), bookingRule.getEndTime(), bookingRule.getIdBookingSurvey(), user)).start();
+                threadPoolExecutor.execute(() -> this.booking(bookingDate, bookingRule.getStartTime(), bookingRule.getEndTime(), bookingRule.getIdBookingSurvey(), user, i.incrementAndGet()));
             }
+
             try {
-                Thread.sleep(5);
+                Thread.sleep(59);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            i++;
+            i.getAndIncrement();
         }
 
 
     }
 
 
-    public void booking(String date, String start_time, String end_time, String id_booking_survey, User user) {
+    public void booking(String date, String start_time, String end_time, String id_booking_survey, User user, int i) {
         String url = "https://newretail.pingan.com.cn/ydt/reserve/reserveOffline?time=" + System.currentTimeMillis();
         Map<String, String> headers = new HashMap<>();
         headers.put("sessionId", user.getSessionId());
@@ -111,9 +123,6 @@ public class UserTask {
         long diff = timeMillis - time;
         time = timeMillis;
 
-//        HttpEntity<JSONObject> request = new HttpEntity<>(json, headers);
-
-
         Result result = null;
         try {
             HttpRequest httpRequest = HttpRequest.post(url).acceptJson();
@@ -124,25 +133,15 @@ public class UserTask {
         } catch (Exception e) {
             log.error("[" + user.getContactName() + "请求超时！");
         }
-
-
         final long currentTimeMillis = System.currentTimeMillis();
 
         if (result != null) {
             long t = currentTimeMillis - timeMillis;
-            log.info("[" + user.getContactName() + "]间隔:" + diff + "\t请求时长：" + t + "\t:返回信息:" + result.getCode() + "\t" + result.getMsg());
-        }
+            log.info("[" + user.getContactName() + "]间隔:" + diff + "\t请求时间："+format.format(new Date(timeMillis))+"\t当前时间："+ format.format(new Date(currentTimeMillis)) + "\t请求时长：" + t + "\t:返回信息:" + result.getCode() + "\t" + result.getMsg() + "请求次数：" + i);
 
-        if (result == null) {
-            if (user.isReservation()) {
-                this.booking(date, start_time, end_time, id_booking_survey, user);
-            }
-        } else {
             if (result.getCode() == 0) {
                 user.setReservation(false);
                 log.info(Thread.currentThread().getName() + "【" + user.getContactName() + "】预约成功！！！！！！");
-            } else if (user.isReservation()) {
-                this.booking(date, start_time, end_time, id_booking_survey, user);
             }
         }
 
