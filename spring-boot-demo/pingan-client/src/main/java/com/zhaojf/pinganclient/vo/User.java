@@ -19,6 +19,8 @@ public class User {
 
     private String number;
 
+    private Thread thread;
+
     public User(String sessionId, String signature, String contactName, String contactTelephone, String vehicleNo, String number) {
         this.sessionId = sessionId;
         this.signature = signature;

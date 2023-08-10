@@ -16,11 +16,11 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
-public class UserTask implements Runnable{
+public class UserTask implements Runnable {
 
     private final User user;
 
-    private final InsuranceInfo insuranceInfo;
+    public static InsuranceInfo insuranceInfo;
 
     public static Long time = 0L;
 
@@ -28,16 +28,15 @@ public class UserTask implements Runnable{
 
     private final ThreadPoolExecutor threadPoolExecutor;
 
-    public UserTask(User user, InsuranceInfo insuranceInfo, ThreadPoolExecutor threadPoolExecutor) {
+    public UserTask(User user, ThreadPoolExecutor threadPoolExecutor) {
         this.user = user;
-        this.insuranceInfo = insuranceInfo;
         this.threadPoolExecutor = threadPoolExecutor;
     }
+
 
     @Override
     public void run() {
 
-        log.info("开始2请求时间："+format.format(new Date(System.currentTimeMillis())));
         String number = user.getNumber();
         if (number == null || "".equals(number)) {
             number = "2";
@@ -48,34 +47,32 @@ public class UserTask implements Runnable{
         String bookingDate = insuranceInfo.getBookingDate();
         AtomicInteger i = new AtomicInteger();
         while (this.user.isReservation()) {
-            if (i.get() == 0) {
-
-                log.info("开始3请求时间："+format.format(new Date(System.currentTimeMillis())));
-                // 优先遍历指定的节点
-                for (String j : s) {
-                    final BookingRule bookingRule = bookingRules.get(Integer.parseInt(j));
-                    log.info("开始4请求时间："+format.format(new Date(System.currentTimeMillis())));
-                    threadPoolExecutor.execute(() -> this.booking(bookingDate, bookingRule.getStartTime(), bookingRule.getEndTime(), bookingRule.getIdBookingSurvey(), user, i.incrementAndGet()));
-                }
-
-                // 休眠5毫米开始随机预约
-                try {
-                    Thread.sleep(50);
-                } catch (InterruptedException ignored) {
-                }
-
-            }
-
-            for (BookingRule bookingRule : bookingRules) {
+            // 优先遍历指定的节点
+//          if (i.get() == 0) {
+            for (String j : s) {
+                final BookingRule bookingRule = bookingRules.get(Integer.parseInt(j));
                 threadPoolExecutor.execute(() -> this.booking(bookingDate, bookingRule.getStartTime(), bookingRule.getEndTime(), bookingRule.getIdBookingSurvey(), user, i.incrementAndGet()));
             }
 
+            // 休眠5毫米
             try {
-                Thread.sleep(59);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+                Thread.sleep(5);
+            } catch (InterruptedException ignored) {
             }
-            i.getAndIncrement();
+
+//         }
+
+            // 开始随机预约
+//            for (BookingRule bookingRule : bookingRules) {
+//                threadPoolExecutor.execute(() -> this.booking(bookingDate, bookingRule.getStartTime(), bookingRule.getEndTime(), bookingRule.getIdBookingSurvey(), user, i.incrementAndGet()));
+//            }
+//
+//            try {
+//                Thread.sleep(5);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//            i.getAndIncrement();
         }
 
 
@@ -128,23 +125,49 @@ public class UserTask implements Runnable{
             HttpRequest httpRequest = HttpRequest.post(url).acceptJson();
             httpRequest.headers(headers);
             httpRequest.send(json.toJSONString());
-            final String body = httpRequest.body();
-            result = JSONObject.parseObject(body, Result.class);
+            final int code = httpRequest.code();
+            if (code == 200 && this.user.isReservation()) {
+                final String body = httpRequest.body();
+                result = JSONObject.parseObject(body, Result.class);
+                final long currentTimeMillis = System.currentTimeMillis();
+
+                if (result != null) {
+                    long t = currentTimeMillis - timeMillis;
+                    log.info("[" + user.getContactName() + "]间隔:" + diff + "\t请求时间：" + format.format(new Date(timeMillis)) + "\t当前时间：" + format.format(new Date(currentTimeMillis)) + "\t请求时长：" + t + "\t:返回信息:" + result.getCode() + "\t" + result.getMsg() + "请求次数：" + i);
+
+                    if (result.getCode() == 0) {
+                        user.setReservation(false);
+                        log.info(Thread.currentThread().getName() + "【" + user.getContactName() + "】预约成功！！！！！！");
+                        threadPoolExecutor.execute(() -> addRecord(user, date + " " + start_time + "-" + end_time));
+                    }
+                }
+            }else{
+                httpRequest.disconnect();
+            }
         } catch (Exception e) {
             log.error("[" + user.getContactName() + "请求超时！");
         }
-        final long currentTimeMillis = System.currentTimeMillis();
 
-        if (result != null) {
-            long t = currentTimeMillis - timeMillis;
-            log.info("[" + user.getContactName() + "]间隔:" + diff + "\t请求时间："+format.format(new Date(timeMillis))+"\t当前时间："+ format.format(new Date(currentTimeMillis)) + "\t请求时长：" + t + "\t:返回信息:" + result.getCode() + "\t" + result.getMsg() + "请求次数：" + i);
-
-            if (result.getCode() == 0) {
-                user.setReservation(false);
-                log.info(Thread.currentThread().getName() + "【" + user.getContactName() + "】预约成功！！！！！！");
-            }
-        }
 
     }
+
+
+    private void addRecord(User user, String date) {
+        String url = "http://82.157.162.192:80/pingan/record";
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "application/json");
+
+        JSONObject json = new JSONObject();
+        json.put("name", user.getContactName());
+        json.put("telephone", user.getContactTelephone());
+        json.put("vehicleNo", user.getVehicleNo());
+        json.put("date", date);
+
+        HttpRequest httpRequest = HttpRequest.post(url).acceptJson();
+        httpRequest.headers(headers);
+        httpRequest.send(json.toJSONString());
+        httpRequest.body();
+    }
+
 
 }

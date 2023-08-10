@@ -1,11 +1,10 @@
 package com.zhaojf.pingan.controller;
 
-import com.alibaba.fastjson.JSONObject;
 import com.zhaojf.pingan.entity.User;
 import com.zhaojf.pingan.service.UserService;
-import com.zhaojf.pingan.task.Task;
-import com.zhaojf.pingan.vo.TokenInfo;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 

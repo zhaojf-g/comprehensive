@@ -6,13 +6,11 @@ import com.zhaojf.pinganclient.vo.InsuranceInfo;
 import com.zhaojf.pinganclient.vo.Result;
 import com.zhaojf.pinganclient.vo.User;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -30,50 +28,59 @@ public class TaskRequest {
         this.threadPoolExecutor = threadPoolExecutor;
     }
 
-    public void select(List<User> users, AtomicBoolean search) {
+    public void select(List<User> users, AtomicBoolean search, int i) {
         if (search.get()) {
             final long timeMillis = System.currentTimeMillis();
             long diff = timeMillis - time;
             time = timeMillis;
             String url = "https://newretail.pingan.com.cn/ydt/reserve/store/bookingTime?storefrontseq=39807&businessType=14&time=" + System.currentTimeMillis();
             final HttpRequest httpRequest = HttpRequest.get(url);
-            if (httpRequest.code() == 200) {
-                final String body = httpRequest.body();
-                Result result = JSONObject.parseObject(body, Result.class);
+            httpRequest.readTimeout(300);
+            try {
+                if (httpRequest.code() == 200) {
+                    synchronized (search) {
+                        if (search.get()) {
+                            final String body = httpRequest.body();
+                            Result result = JSONObject.parseObject(body, Result.class);
 
-                final long currentTimeMillis = System.currentTimeMillis();
+                            final long currentTimeMillis = System.currentTimeMillis();
 
+                            long t = currentTimeMillis - timeMillis;
+                            if (result != null && result.getData().size() > 0) {
 
-                long t = currentTimeMillis - timeMillis;
-                if (result != null && result.getData().size() > 0) {
-                    StringBuilder str = new StringBuilder("间隔:" + diff + "\t请求时间："+format.format(new Date(timeMillis))+"\t当前时间："+ format.format(new Date(currentTimeMillis)) +"\t请求时长：" + t + "\t");
-                    for (InsuranceInfo insuranceInfo : result.getData()) {
-                        str.append(insuranceInfo.getBookingDate()).append("\t可预约总数：").append(insuranceInfo.getTotalBookableNum()).append("\t");
-                    }
-                    log.info(str.toString());
-
-                    for (InsuranceInfo insuranceInfo : result.getData()) {
-                        if (insuranceInfo.getTotalBookableNum() >= 0) {
-                            Thread.currentThread().setPriority(10);
-//                            synchronized (search) {
-                                if (search.get()) {
-                                    search.set(false);
-                                    for (User user : users) {
-                                        log.info("开始1请求时间："+format.format(new Date(System.currentTimeMillis())));
-                                        UserTask userTask = new UserTask(user, insuranceInfo, threadPoolExecutor);
-                                        Thread thread = new Thread(userTask);
-                                        thread.setPriority(10);
-                                        threadPoolExecutor.execute(thread);
-                                    }
+                                StringBuilder str = new StringBuilder("间隔:" + diff + "\t请求时间：" + format.format(new Date(timeMillis)) + "\t当前时间：" + format.format(new Date(currentTimeMillis)) + "\t请求时长：" + t + "\t");
+                                for (InsuranceInfo insuranceInfo : result.getData()) {
+                                    str.append(insuranceInfo.getBookingDate()).append("\t可预约总数：").append(insuranceInfo.getTotalBookableNum()).append("\t");
                                 }
-//                            }
+                                log.info(str.toString());
 
+
+                                for (InsuranceInfo insuranceInfo : result.getData()) {
+                                    if (insuranceInfo.getTotalBookableNum() > 0) {
+                                        search.set(false);
+                                        UserTask.insuranceInfo = insuranceInfo;
+                                        Thread.currentThread().setPriority(10);
+                                        search.set(false);
+                                        for (User user : users) {
+                                            threadPoolExecutor.execute(user.getThread());
+                                        }
+
+                                    }
+
+                                }
+                            } else {
+                                log.info("\t间隔:" + diff + "\t请求时长：" + t + "\t无号！！！！！！！！");
+                            }
+
+                        } else {
+                            httpRequest.disconnect();
                         }
-
                     }
-                } else {
-                    log.info("\t间隔:" + diff + "\t请求时长：" + t + "\t无号！！！！！！！！");
+
+
                 }
+            } catch (Exception e) {
+                log.error("请求超时");
             }
         }
     }

@@ -1,0 +1,24 @@
+server:
+  servlet:
+    context-path: /rfidpcs
+  port: 51071
+spring:
+  application:
+    ## 注册服务名
+    name: admin-order
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 200MB
+      max-request-size: 200MB
+  datasource:
+    url: jdbc:mysql://zhaojf-aly-mysql-jq.rwlb.rds.aliyuncs.com:3306/rfid_test?autoReconnect=true&useUnicode=true&characterEncoding=utf8&useOldAliasMetadataBehavior=true&useCursorFetch=true&defaultFetchSize=10000&useSSL=false&serverTimezone=Asia/Shanghai
+    username: zhaojf_dev
+    password: Aly_158158
+    driverClassName: com.mysql.jdbc.Driver
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  messages:
+    basename: i18n/messages
+    encoding: utf-8

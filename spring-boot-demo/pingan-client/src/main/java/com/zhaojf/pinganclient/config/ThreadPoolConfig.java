@@ -12,9 +12,13 @@ import java.util.concurrent.TimeUnit;
 public class ThreadPoolConfig {
 
     @Bean
-    public ThreadPoolExecutor myThreadPoolTaskExecutor1() {
+    public ThreadPoolExecutor myThreadPoolTaskExecutor() {
         return new ThreadPoolExecutor(100, 10000,
-                20, TimeUnit.SECONDS, new ArrayBlockingQueue<>(1));
+                20, TimeUnit.SECONDS, new ArrayBlockingQueue<>(1), r -> {
+                    final Thread thread = new Thread(r);
+                    thread.setPriority(10);
+                    return thread;
+                });
     }
 
 //    @Bean
