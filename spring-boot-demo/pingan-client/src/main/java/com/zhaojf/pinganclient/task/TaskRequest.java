@@ -6,7 +6,9 @@ import com.zhaojf.pinganclient.vo.InsuranceInfo;
 import com.zhaojf.pinganclient.vo.Result;
 import com.zhaojf.pinganclient.vo.User;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -22,10 +24,13 @@ public class TaskRequest {
 
     private final ThreadPoolExecutor threadPoolExecutor;
 
+    private final RestTemplate restTemplate;
+
     public static Long time = 0L;
 
-    public TaskRequest(ThreadPoolExecutor threadPoolExecutor) {
+    public TaskRequest(ThreadPoolExecutor threadPoolExecutor, RestTemplate restTemplate) {
         this.threadPoolExecutor = threadPoolExecutor;
+        this.restTemplate = restTemplate;
     }
 
     public void select(List<User> users, AtomicBoolean search, int i) {
@@ -34,17 +39,24 @@ public class TaskRequest {
             long diff = timeMillis - time;
             time = timeMillis;
             String url = "https://newretail.pingan.com.cn/ydt/reserve/store/bookingTime?storefrontseq=39807&businessType=14&time=" + System.currentTimeMillis();
-            final HttpRequest httpRequest = HttpRequest.get(url);
-            httpRequest.readTimeout(300);
+            int code = 0;
+
+//            final HttpRequest httpRequest = HttpRequest.get(url);
+//            httpRequest.readTimeout(5000);
+//            code = httpRequest.code();
+            ResponseEntity<Result> forEntity = restTemplate.getForEntity(url, Result.class);
+            code = forEntity.getStatusCode().value();
+
             try {
-                if (httpRequest.code() == 200) {
+                if (code == 200) {
                     synchronized (search) {
                         if (search.get()) {
-                            final String body = httpRequest.body();
-                            Result result = JSONObject.parseObject(body, Result.class);
+
+//                            final String body = httpRequest.body();
+//                            Result result = JSONObject.parseObject(body, Result.class);
+                            Result result = forEntity.getBody();
 
                             final long currentTimeMillis = System.currentTimeMillis();
-
                             long t = currentTimeMillis - timeMillis;
                             if (result != null && result.getData().size() > 0) {
 
@@ -73,7 +85,7 @@ public class TaskRequest {
                             }
 
                         } else {
-                            httpRequest.disconnect();
+//                            httpRequest.disconnect();
                         }
                     }
 
