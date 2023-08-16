@@ -38,28 +38,28 @@ public class TaskRequest {
             final long timeMillis = System.currentTimeMillis();
             long diff = timeMillis - time;
             time = timeMillis;
-            String url = "https://newretail.pingan.com.cn/ydt/reserve/store/bookingTime?storefrontseq=39807&businessType=14&time=" + System.currentTimeMillis();
+            String url = "https://newretail.pingan.com.cn/ydt/reserve/store/bookingTime?storefrontseq=39807&businessType=14";
             int code = 0;
 
-//            final HttpRequest httpRequest = HttpRequest.get(url);
-//            httpRequest.readTimeout(5000);
-//            code = httpRequest.code();
-            ResponseEntity<Result> forEntity = restTemplate.getForEntity(url, Result.class);
-            code = forEntity.getStatusCode().value();
+            final HttpRequest httpRequest = HttpRequest.get(url);
+            httpRequest.readTimeout(5000);
+            code = httpRequest.code();
+//            ResponseEntity<Result> forEntity = restTemplate.getForEntity(url, Result.class);
+//            code = forEntity.getStatusCode().value();
 
             try {
                 if (code == 200) {
                     synchronized (search) {
                         if (search.get()) {
 
-//                            final String body = httpRequest.body();
-//                            Result result = JSONObject.parseObject(body, Result.class);
-                            Result result = forEntity.getBody();
+                            final String body = httpRequest.body();
+                            Result result = JSONObject.parseObject(body, Result.class);
+//                            Result result = forEntity.getBody();
 
                             final long currentTimeMillis = System.currentTimeMillis();
                             long t = currentTimeMillis - timeMillis;
                             if (result != null && result.getData().size() > 0) {
-
+                                Task.timeCount += t;
                                 StringBuilder str = new StringBuilder("间隔:" + diff + "\t请求时间：" + format.format(new Date(timeMillis)) + "\t当前时间：" + format.format(new Date(currentTimeMillis)) + "\t请求时长：" + t + "\t");
                                 for (InsuranceInfo insuranceInfo : result.getData()) {
                                     str.append(insuranceInfo.getBookingDate()).append("\t可预约总数：").append(insuranceInfo.getTotalBookableNum()).append("\t");

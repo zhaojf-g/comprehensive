@@ -26,6 +26,10 @@ public class Task {
 
     private final AtomicBoolean search = new AtomicBoolean(true);
 
+    public static long timeCount = 0;
+
+    public AtomicInteger a = new AtomicInteger(0);
+
     private final ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(100, 10000,
             20, TimeUnit.SECONDS, new ArrayBlockingQueue<>(1), r -> {
         final Thread thread = new Thread(r);
@@ -57,7 +61,6 @@ public class Task {
 
 
     public void task() throws InterruptedException {
-
         String url = "http://82.157.162.192:80/pingan/token?time=" + System.currentTimeMillis();
 //        String url = "http://127.0.0.1:51071/pingan/token?time=" + System.currentTimeMillis();
         final HttpRequest httpRequest = HttpRequest.get(url);
@@ -76,11 +79,12 @@ public class Task {
                     this.users.add(user);
                 }
             }
-            AtomicInteger i = new AtomicInteger(1);
+
             while (this.search.get()) {
-                threadPoolExecutor.execute(() -> taskRequest.select(this.users, search, i.getAndIncrement()));
+                threadPoolExecutor.execute(() -> taskRequest.select(this.users, search, a.getAndIncrement()));
                 Thread.sleep(sleepMillis);
             }
+            this.stopTask();
         } else {
             log.error("获取身份失败!");
             Thread.sleep(1000);
@@ -107,6 +111,7 @@ public class Task {
         str.append("共【").append(i).append("】人");
         log.info(str.toString());
         this.users.clear();
+        log.info("共请求：" + a.get() + "次，平均：" + timeCount / a.get());
     }
 
 
